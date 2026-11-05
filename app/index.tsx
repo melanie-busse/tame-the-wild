@@ -1,12 +1,18 @@
-import { StatusBar } from 'expo-status-bar';
 import React from 'react';
-import { StyleSheet, Text, View, FlatList, ListRenderItem } from 'react-native';
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { MOCK_DOCUMENTS, Document } from './src/data/mockDocuments';
+import { StyleSheet, Text, View, FlatList, TouchableOpacity, ListRenderItem } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
+import { useRouter } from 'expo-router';
+import { MOCK_DOCUMENTS, Document } from '../src/data/mockDocuments';
 
-export default function App() {
+export default function HomeScreen() {
+    const router = useRouter();
+
     const renderDocumentItem: ListRenderItem<Document> = ({ item }) => (
-        <View style={styles.card}>
+        <TouchableOpacity
+            style={styles.card}
+            onPress={() => router.push(`/document/${item.id}`)}
+        >
             <Text style={styles.title}>{item.title}</Text>
             <View style={styles.metaContainer}>
                 <Text style={styles.subtext}>🏢 {item.correspondent}</Text>
@@ -18,26 +24,24 @@ export default function App() {
                     <Text key={index} style={styles.tag}>{tag}</Text>
                 ))}
             </View>
-        </View>
+        </TouchableOpacity>
     );
 
     return (
-        <SafeAreaProvider>
-            <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-                <StatusBar style="dark" />
-                <View style={styles.headerContainer}>
-                    <Text style={styles.headerTitle}>TameTheWild 🦁</Text>
-                    <Text style={styles.headerSubtitle}>Deine Dokumente (Offline-Modus)</Text>
-                </View>
+        <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+            <StatusBar style="dark" />
+            <View style={styles.headerContainer}>
+                <Text style={styles.headerTitle}>TameTheWild 🦁</Text>
+                <Text style={styles.headerSubtitle}>Deine Dokumente (Offline-Modus)</Text>
+            </View>
 
-                <FlatList
-                    data={MOCK_DOCUMENTS}
-                    renderItem={renderDocumentItem}
-                    keyExtractor={(item) => item.id}
-                    contentContainerStyle={styles.listContainer}
-                />
-            </SafeAreaView>
-        </SafeAreaProvider>
+            <FlatList
+                data={MOCK_DOCUMENTS}
+                renderItem={renderDocumentItem}
+                keyExtractor={(item) => item.id}
+                contentContainerStyle={styles.listContainer}
+            />
+        </SafeAreaView>
     );
 }
 
