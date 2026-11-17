@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
     StyleSheet, Text, View, ActivityIndicator, ScrollView,
     TouchableOpacity, Alert, Modal, Dimensions, Platform,
+    Image as RNImage,
 } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -24,6 +25,7 @@ export default function DocumentDetailScreen() {
     const [document, setDocument] = useState<Document | null>(null);
     const [loading, setLoading] = useState(true);
     const [viewerVisible, setViewerVisible] = useState(false);
+    const [viewerUri, setViewerUri] = useState<string | null>(null);
     const [pdfUri, setPdfUri] = useState<string | null>(null);
     const [pdfDownloading, setPdfDownloading] = useState(false);
     const [editModalVisible, setEditModalVisible] = useState(false);
@@ -43,33 +45,38 @@ export default function DocumentDetailScreen() {
     }, [docId]);
 
     const handleThumbnailPress = async () => {
+        const isImage = isImageMime(document?.mime_type);
+        const mime = document?.mime_type ?? '';
+        const ext = isImage
+            ? (mime.includes('png') ? 'png' : mime.includes('gif') ? 'gif' : 'jpg')
+            : 'pdf';
+        const localPath = `${FileSystem.cacheDirectory ?? ''}doc_${docId}.${ext}`;
+
         setViewerVisible(true);
-
-        if (isImageMime(document?.mime_type)) {
-            // Bilder werden direkt per URL mit Auth-Header geladen — kein lokaler Download nötig
-            return;
-        }
-
-        // PDF: lokal cachen
-        const localPath = `${FileSystem.cacheDirectory ?? ''}doc_${docId}.pdf`;
+        setViewerUri(null);
         setPdfUri(null);
-
-        const info = await FileSystem.getInfoAsync(localPath);
-        if (info.exists) {
-            setPdfUri(localPath);
-            return;
-        }
-
         setPdfDownloading(true);
+
         try {
-            const result = await FileSystem.downloadAsync(
-                `${BASE_URL}/documents/${docId}/download/`,
-                localPath,
-                { headers: { Authorization: API_TOKEN } }
-            );
-            setPdfUri(result.uri);
+            const info = await FileSystem.getInfoAsync(localPath);
+            const downloadUrl = isImage
+                ? `${BASE_URL}/documents/${docId}/download/?original=true`
+                : `${BASE_URL}/documents/${docId}/download/`;
+            const uri = info.exists
+                ? localPath
+                : (await FileSystem.downloadAsync(
+                    downloadUrl,
+                    localPath,
+                    { headers: { Authorization: API_TOKEN } }
+                )).uri;
+
+            if (isImage) {
+                setViewerUri(uri);
+            } else {
+                setPdfUri(uri);
+            }
         } catch (e) {
-            Alert.alert('Fehler', 'PDF konnte nicht heruntergeladen werden.');
+            Alert.alert('Fehler', 'Dokument konnte nicht geladen werden.');
             setViewerVisible(false);
         } finally {
             setPdfDownloading(false);
@@ -199,7 +206,12 @@ export default function DocumentDetailScreen() {
                         <Text style={styles.closeButtonText}>✕  Schließen</Text>
                     </TouchableOpacity>
 
-                    {isImageMime(document.mime_type) ? (
+                    {pdfDownloading || (!viewerUri && !pdfUri) ? (
+                        <View style={styles.centerContainer}>
+                            <ActivityIndicator size="large" color="#228be6" />
+                            <Text style={styles.loadingText}>Dokument wird geladen…</Text>
+                        </View>
+                    ) : isImageMime(document.mime_type) && viewerUri ? (
                         <ScrollView
                             style={styles.imageScrollView}
                             contentContainerStyle={styles.imageScrollContent}
@@ -209,23 +221,13 @@ export default function DocumentDetailScreen() {
                             showsVerticalScrollIndicator={false}
                             showsHorizontalScrollIndicator={false}
                         >
-                            <Image
-                                source={{
-                                    uri: `${BASE_URL}/documents/${docId}/download/`,
-                                    headers: { Authorization: API_TOKEN },
-                                }}
+                            <RNImage
+                                source={{ uri: viewerUri }}
                                 style={styles.fullImage}
-                                contentFit="contain"
+                                resizeMode="contain"
                             />
                         </ScrollView>
-                    ) : pdfDownloading || !pdfUri ? (
-                        <View style={styles.centerContainer}>
-                            <ActivityIndicator size="large" color="#228be6" />
-                            <Text style={styles.loadingText}>
-                                {pdfDownloading ? 'PDF wird geladen…' : 'Öffne PDF…'}
-                            </Text>
-                        </View>
-                    ) : (
+                    ) : pdfUri ? (
                         <Pdf
                             source={{ uri: pdfUri, cache: false }}
                             style={styles.pdf}
@@ -236,7 +238,7 @@ export default function DocumentDetailScreen() {
                                 setViewerVisible(false);
                             }}
                         />
-                    )}
+                    ) : null}
                 </SafeAreaView>
             </Modal>
 
@@ -290,5 +292,5 @@ const styles = StyleSheet.create({
     pdf: { flex: 1, width: SCREEN_WIDTH, backgroundColor: '#1a1a1a' },
     imageScrollView: { flex: 1 },
     imageScrollContent: { flexGrow: 1, justifyContent: 'center', alignItems: 'center' },
-    fullImage: { width: SCREEN_WIDTH, height: SCREEN_WIDTH * 1.4 },
+    fullImage: { width: SCREEN_WIDTH, height: SCREEN_WIDTH * 1.4, backgroundColor: '#1a1a1a' },
 });
