@@ -3,14 +3,33 @@
 export const BASE_URL = (process.env.EXPO_PUBLIC_PAPERLESS_URL || '').replace(/\/documents\/?$/, '');
 export const API_TOKEN = process.env.EXPO_PUBLIC_PAPERLESS_TOKEN || '';
 
+export interface Correspondent {
+    id: number;
+    name: string;
+}
+
+export interface Tag {
+    id: number;
+    name: string;
+}
+
 export interface Document {
     id: string;
     title: string;
     created: string;
     correspondent: string;
+    correspondentId?: number | null;
     document_type: string;
     tags: string[];
+    tagIds?: number[];
     content?: string;
+}
+
+export interface DocumentPatch {
+    title?: string;
+    created?: string;
+    correspondent?: number | null;
+    tags?: number[];
 }
 
 const headers = {
@@ -87,12 +106,33 @@ export async function fetchDocumentById(id: string): Promise<Document | null> {
             title: doc.title || 'Untitled',
             created: doc.created ? doc.created.split('T')[0] : 'Unknown',
             correspondent: doc.correspondent ? (correspondentMap[doc.correspondent] ?? doc.correspondent.toString()) : 'Kein Absender',
+            correspondentId: doc.correspondent ?? null,
             document_type: doc.document_type ? (documentTypeMap[doc.document_type] ?? doc.document_type.toString()) : 'Standard',
             tags: doc.tags ? doc.tags.map((t: number) => tagMap[t] ?? t.toString()) : [],
+            tagIds: doc.tags ?? [],
             content: doc.content || '',
         };
     } catch (error) {
         console.error('Error loading document by ID:', error);
         return null;
     }
+}
+
+export async function fetchCorrespondentsList(): Promise<Correspondent[]> {
+    const items = await fetchAll(`${BASE_URL}/correspondents/`);
+    return items.map((c: any) => ({ id: c.id, name: c.name }));
+}
+
+export async function fetchTagsList(): Promise<Tag[]> {
+    const items = await fetchAll(`${BASE_URL}/tags/`);
+    return items.map((t: any) => ({ id: t.id, name: t.name }));
+}
+
+export async function patchDocument(id: string, patch: DocumentPatch): Promise<void> {
+    const response = await fetch(`${BASE_URL}/documents/${id}/`, {
+        method: 'PATCH',
+        headers: { Authorization: API_TOKEN, 'Content-Type': 'application/json' },
+        body: JSON.stringify(patch),
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
 }

@@ -9,8 +9,9 @@ import { Image } from 'expo-image';
 import * as FileSystem from 'expo-file-system/legacy';
 import Pdf from 'react-native-pdf';
 import { Document, fetchDocumentById, BASE_URL, API_TOKEN } from '../../src/services/api';
+import EditDocumentModal, { SavedFields } from '../../components/EditDocumentModal';
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function DocumentDetailScreen() {
     const { id } = useLocalSearchParams();
@@ -21,6 +22,7 @@ export default function DocumentDetailScreen() {
     const [pdfModalVisible, setPdfModalVisible] = useState(false);
     const [pdfUri, setPdfUri] = useState<string | null>(null);
     const [pdfDownloading, setPdfDownloading] = useState(false);
+    const [editModalVisible, setEditModalVisible] = useState(false);
 
     useEffect(() => {
         async function load() {
@@ -63,6 +65,18 @@ export default function DocumentDetailScreen() {
         }
     };
 
+    const handleSaved = (fields: SavedFields) => {
+        setDocument(prev => prev ? {
+            ...prev,
+            title: fields.title,
+            created: fields.created,
+            correspondent: fields.correspondent,
+            correspondentId: fields.correspondentId,
+            tags: fields.tags,
+            tagIds: fields.tagIds,
+        } : prev);
+    };
+
     if (loading) {
         return (
             <SafeAreaView style={styles.centerContainer}>
@@ -87,10 +101,19 @@ export default function DocumentDetailScreen() {
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 <View style={styles.card}>
 
-                    {/* Header: Typ + Datum */}
+                    {/* Header: Typ + Datum + Bearbeiten-Button */}
                     <View style={styles.headerRow}>
                         <Text style={styles.typeTag}>{document.document_type}</Text>
-                        <Text style={styles.dateText}>📅 {document.created}</Text>
+                        <View style={styles.headerRight}>
+                            <Text style={styles.dateText}>📅 {document.created}</Text>
+                            <TouchableOpacity
+                                style={styles.editButton}
+                                onPress={() => setEditModalVisible(true)}
+                                activeOpacity={0.7}
+                            >
+                                <Text style={styles.editButtonText}>✏️ Bearbeiten</Text>
+                            </TouchableOpacity>
+                        </View>
                     </View>
 
                     {/* Titel */}
@@ -186,6 +209,14 @@ export default function DocumentDetailScreen() {
                     )}
                 </SafeAreaView>
             </Modal>
+
+            {/* Metadaten-Bearbeiten-Modal */}
+            <EditDocumentModal
+                visible={editModalVisible}
+                document={document}
+                onClose={() => setEditModalVisible(false)}
+                onSaved={handleSaved}
+            />
         </SafeAreaView>
     );
 }
@@ -196,9 +227,12 @@ const styles = StyleSheet.create({
     scrollContent: { padding: 16 },
     card: { backgroundColor: '#ffffff', padding: 20, borderRadius: 14, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 5, elevation: 2 },
 
-    headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+    headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 },
+    headerRight: { alignItems: 'flex-end', gap: 6 },
     typeTag: { backgroundColor: '#e7f5ff', color: '#1971c2', fontSize: 12, fontWeight: '600', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 },
     dateText: { fontSize: 13, color: '#6c757d' },
+    editButton: { backgroundColor: '#f1f3f5', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 },
+    editButtonText: { fontSize: 13, color: '#495057', fontWeight: '500' },
     title: { fontSize: 22, fontWeight: '700', color: '#212529', marginBottom: 16 },
 
     thumbnailContainer: { borderRadius: 10, overflow: 'hidden', backgroundColor: '#f1f3f5', marginBottom: 20 },
