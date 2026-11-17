@@ -23,6 +23,7 @@ export interface Document {
     tags: string[];
     tagIds?: number[];
     content?: string;
+    mime_type?: string;
 }
 
 export interface DocumentPatch {
@@ -111,6 +112,7 @@ export async function fetchDocumentById(id: string): Promise<Document | null> {
             tags: doc.tags ? doc.tags.map((t: number) => tagMap[t] ?? t.toString()) : [],
             tagIds: doc.tags ?? [],
             content: doc.content || '',
+            mime_type: doc.mime_type ?? '',
         };
     } catch (error) {
         console.error('Error loading document by ID:', error);

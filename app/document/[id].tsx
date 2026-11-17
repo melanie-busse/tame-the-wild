@@ -9,6 +9,10 @@ import { Image } from 'expo-image';
 import * as FileSystem from 'expo-file-system/legacy';
 import Pdf from 'react-native-pdf';
 import { Document, fetchDocumentById, BASE_URL, API_TOKEN } from '../../src/services/api';
+
+function isImageMime(mimeType?: string): boolean {
+    return !!mimeType && mimeType.startsWith('image/');
+}
 import EditDocumentModal, { SavedFields } from '../../components/EditDocumentModal';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -19,7 +23,7 @@ export default function DocumentDetailScreen() {
 
     const [document, setDocument] = useState<Document | null>(null);
     const [loading, setLoading] = useState(true);
-    const [pdfModalVisible, setPdfModalVisible] = useState(false);
+    const [viewerVisible, setViewerVisible] = useState(false);
     const [pdfUri, setPdfUri] = useState<string | null>(null);
     const [pdfDownloading, setPdfDownloading] = useState(false);
     const [editModalVisible, setEditModalVisible] = useState(false);
@@ -39,8 +43,15 @@ export default function DocumentDetailScreen() {
     }, [docId]);
 
     const handleThumbnailPress = async () => {
+        setViewerVisible(true);
+
+        if (isImageMime(document?.mime_type)) {
+            // Bilder werden direkt per URL mit Auth-Header geladen — kein lokaler Download nötig
+            return;
+        }
+
+        // PDF: lokal cachen
         const localPath = `${FileSystem.cacheDirectory ?? ''}doc_${docId}.pdf`;
-        setPdfModalVisible(true);
         setPdfUri(null);
 
         const info = await FileSystem.getInfoAsync(localPath);
@@ -59,7 +70,7 @@ export default function DocumentDetailScreen() {
             setPdfUri(result.uri);
         } catch (e) {
             Alert.alert('Fehler', 'PDF konnte nicht heruntergeladen werden.');
-            setPdfModalVisible(false);
+            setViewerVisible(false);
         } finally {
             setPdfDownloading(false);
         }
@@ -174,21 +185,40 @@ export default function DocumentDetailScreen() {
                 </View>
             </ScrollView>
 
-            {/* Vollbild-PDF-Modal */}
+            {/* Vollbild-Viewer-Modal (PDF oder Bild) */}
             <Modal
-                visible={pdfModalVisible}
+                visible={viewerVisible}
                 animationType="slide"
-                onRequestClose={() => setPdfModalVisible(false)}
+                onRequestClose={() => setViewerVisible(false)}
             >
                 <SafeAreaView style={styles.modalContainer}>
                     <TouchableOpacity
                         style={styles.closeButton}
-                        onPress={() => setPdfModalVisible(false)}
+                        onPress={() => setViewerVisible(false)}
                     >
                         <Text style={styles.closeButtonText}>✕  Schließen</Text>
                     </TouchableOpacity>
 
-                    {pdfDownloading || !pdfUri ? (
+                    {isImageMime(document.mime_type) ? (
+                        <ScrollView
+                            style={styles.imageScrollView}
+                            contentContainerStyle={styles.imageScrollContent}
+                            maximumZoomScale={5}
+                            minimumZoomScale={1}
+                            centerContent
+                            showsVerticalScrollIndicator={false}
+                            showsHorizontalScrollIndicator={false}
+                        >
+                            <Image
+                                source={{
+                                    uri: `${BASE_URL}/documents/${docId}/download/`,
+                                    headers: { Authorization: API_TOKEN },
+                                }}
+                                style={styles.fullImage}
+                                contentFit="contain"
+                            />
+                        </ScrollView>
+                    ) : pdfDownloading || !pdfUri ? (
                         <View style={styles.centerContainer}>
                             <ActivityIndicator size="large" color="#228be6" />
                             <Text style={styles.loadingText}>
@@ -203,7 +233,7 @@ export default function DocumentDetailScreen() {
                             onError={(error) => {
                                 console.error('PDF-Fehler:', error);
                                 Alert.alert('Fehler', 'PDF konnte nicht angezeigt werden.');
-                                setPdfModalVisible(false);
+                                setViewerVisible(false);
                             }}
                         />
                     )}
@@ -258,4 +288,7 @@ const styles = StyleSheet.create({
     closeButton: { paddingHorizontal: 16, paddingVertical: 12, alignSelf: 'flex-start' },
     closeButtonText: { color: '#ffffff', fontSize: 16, fontWeight: '600' },
     pdf: { flex: 1, width: SCREEN_WIDTH, backgroundColor: '#1a1a1a' },
+    imageScrollView: { flex: 1 },
+    imageScrollContent: { flexGrow: 1, justifyContent: 'center', alignItems: 'center' },
+    fullImage: { width: SCREEN_WIDTH, height: SCREEN_WIDTH * 1.4 },
 });
