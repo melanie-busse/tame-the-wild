@@ -8,13 +8,14 @@ import { useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import * as FileSystem from 'expo-file-system/legacy';
+import * as Print from 'expo-print';
 import Pdf from 'react-native-pdf';
 import { Document, fetchDocumentById, BASE_URL, API_TOKEN } from '../../src/services/api';
+import EditDocumentModal, { SavedFields } from '../../components/EditDocumentModal';
 
 function isImageMime(mimeType?: string): boolean {
     return !!mimeType && mimeType.startsWith('image/');
 }
-import EditDocumentModal, { SavedFields } from '../../components/EditDocumentModal';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -29,6 +30,7 @@ export default function DocumentDetailScreen() {
     const [pdfUri, setPdfUri] = useState<string | null>(null);
     const [pdfDownloading, setPdfDownloading] = useState(false);
     const [editModalVisible, setEditModalVisible] = useState(false);
+    const [printing, setPrinting] = useState(false);
 
     useEffect(() => {
         async function load() {
@@ -83,6 +85,45 @@ export default function DocumentDetailScreen() {
         }
     };
 
+    const handlePrint = async () => {
+        setPrinting(true);
+        try {
+            const isImage = isImageMime(document?.mime_type);
+            const ext = isImage
+                ? (document?.mime_type?.includes('png') ? 'png' : 'jpg')
+                : 'pdf';
+            const localPath = `${FileSystem.cacheDirectory ?? ''}doc_${docId}.${ext}`;
+
+            let uri = localPath;
+            const info = await FileSystem.getInfoAsync(localPath);
+            if (!info.exists) {
+                const downloadUrl = isImage
+                    ? `${BASE_URL}/documents/${docId}/download/?original=true`
+                    : `${BASE_URL}/documents/${docId}/download/`;
+                const result = await FileSystem.downloadAsync(downloadUrl, localPath, {
+                    headers: { Authorization: API_TOKEN },
+                });
+                uri = result.uri;
+            }
+
+            if (isImage) {
+                const base64 = await FileSystem.readAsStringAsync(uri, {
+                    encoding: FileSystem.EncodingType.Base64,
+                });
+                const mimeType = document?.mime_type ?? 'image/jpeg';
+                await Print.printAsync({
+                    html: `<html><body style="margin:0;display:flex;justify-content:center;align-items:center;height:100vh"><img src="data:${mimeType};base64,${base64}" style="max-width:100%;max-height:100vh;object-fit:contain" /></body></html>`,
+                });
+            } else {
+                await Print.printAsync({ uri });
+            }
+        } catch (e) {
+            Alert.alert('Fehler', 'Drucken fehlgeschlagen.');
+        } finally {
+            setPrinting(false);
+        }
+    };
+
     const handleSaved = (fields: SavedFields) => {
         setDocument(prev => prev ? {
             ...prev,
@@ -124,13 +165,26 @@ export default function DocumentDetailScreen() {
                         <Text style={styles.typeTag}>{document.document_type}</Text>
                         <View style={styles.headerRight}>
                             <Text style={styles.dateText}>📅 {document.created}</Text>
-                            <TouchableOpacity
-                                style={styles.editButton}
-                                onPress={() => setEditModalVisible(true)}
-                                activeOpacity={0.7}
-                            >
-                                <Text style={styles.editButtonText}>✏️ Bearbeiten</Text>
-                            </TouchableOpacity>
+                            <View style={styles.headerActions}>
+                                <TouchableOpacity
+                                    style={styles.editButton}
+                                    onPress={() => setEditModalVisible(true)}
+                                    activeOpacity={0.7}
+                                >
+                                    <Text style={styles.editButtonText}>✏️ Bearbeiten</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={[styles.editButton, printing && styles.editButtonDisabled]}
+                                    onPress={handlePrint}
+                                    activeOpacity={0.7}
+                                    disabled={printing}
+                                >
+                                    {printing
+                                        ? <ActivityIndicator size="small" color="#495057" />
+                                        : <Text style={styles.editButtonText}>🖨️ Drucken</Text>
+                                    }
+                                </TouchableOpacity>
+                            </View>
                         </View>
                     </View>
 
@@ -263,7 +317,9 @@ const styles = StyleSheet.create({
     headerRight: { alignItems: 'flex-end', gap: 6 },
     typeTag: { backgroundColor: '#e7f5ff', color: '#1971c2', fontSize: 12, fontWeight: '600', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 },
     dateText: { fontSize: 13, color: '#6c757d' },
+    headerActions: { flexDirection: 'row', gap: 8 },
     editButton: { backgroundColor: '#f1f3f5', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 },
+    editButtonDisabled: { opacity: 0.5 },
     editButtonText: { fontSize: 13, color: '#495057', fontWeight: '500' },
     title: { fontSize: 22, fontWeight: '700', color: '#212529', marginBottom: 16 },
 
