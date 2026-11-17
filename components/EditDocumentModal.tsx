@@ -6,7 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
     Document, Correspondent, Tag,
-    fetchCorrespondentsList, fetchTagsList, patchDocument,
+    fetchCorrespondentsList, fetchTagsList, patchDocument, createTag,
 } from '../src/services/api';
 
 export interface SavedFields {
@@ -35,6 +35,8 @@ export default function EditDocumentModal({ visible, document, onClose, onSaved 
     const [availableTags, setAvailableTags] = useState<Tag[]>([]);
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
+    const [newTagName, setNewTagName] = useState('');
+    const [creatingTag, setCreatingTag] = useState(false);
 
     useEffect(() => {
         if (!visible) return;
@@ -53,6 +55,22 @@ export default function EditDocumentModal({ visible, document, onClose, onSaved 
             .catch(() => Alert.alert('Fehler', 'Optionen konnten nicht geladen werden.'))
             .finally(() => setLoading(false));
     }, [visible]);
+
+    const handleCreateTag = async () => {
+        const name = newTagName.trim();
+        if (!name) return;
+        setCreatingTag(true);
+        try {
+            const newTag = await createTag(name);
+            setAvailableTags(prev => [...prev, newTag]);
+            setTagIds(prev => [...prev, newTag.id]);
+            setNewTagName('');
+        } catch {
+            Alert.alert('Fehler', `Tag „${name}" konnte nicht angelegt werden.`);
+        } finally {
+            setCreatingTag(false);
+        }
+    };
 
     const toggleTag = (id: number) => {
         setTagIds(prev =>
@@ -159,24 +177,45 @@ export default function EditDocumentModal({ visible, document, onClose, onSaved 
 
                             {/* Tags — Multi-Auswahl */}
                             <Text style={styles.label}>Tags</Text>
-                            {availableTags.length === 0
-                                ? <Text style={styles.emptyText}>Keine Tags vorhanden</Text>
-                                : (
-                                    <View style={styles.chipRow}>
-                                        {availableTags.map(t => (
-                                            <TouchableOpacity
-                                                key={t.id}
-                                                style={[styles.chip, tagIds.includes(t.id) && styles.chipSelected]}
-                                                onPress={() => toggleTag(t.id)}
-                                            >
-                                                <Text style={[styles.chipText, tagIds.includes(t.id) && styles.chipTextSelected]}>
-                                                    #{t.name}
-                                                </Text>
-                                            </TouchableOpacity>
-                                        ))}
-                                    </View>
-                                )
-                            }
+                            {availableTags.length > 0 && (
+                                <View style={styles.chipRow}>
+                                    {availableTags.map(t => (
+                                        <TouchableOpacity
+                                            key={t.id}
+                                            style={[styles.chip, tagIds.includes(t.id) && styles.chipSelected]}
+                                            onPress={() => toggleTag(t.id)}
+                                        >
+                                            <Text style={[styles.chipText, tagIds.includes(t.id) && styles.chipTextSelected]}>
+                                                #{t.name}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+                            )}
+
+                            {/* Neues Tag anlegen */}
+                            <View style={styles.newTagRow}>
+                                <TextInput
+                                    style={styles.newTagInput}
+                                    value={newTagName}
+                                    onChangeText={setNewTagName}
+                                    placeholder="Neues Tag hinzufügen…"
+                                    placeholderTextColor="#adb5bd"
+                                    onSubmitEditing={handleCreateTag}
+                                    returnKeyType="done"
+                                    editable={!creatingTag}
+                                />
+                                <TouchableOpacity
+                                    style={[styles.newTagButton, (!newTagName.trim() || creatingTag) && styles.newTagButtonDisabled]}
+                                    onPress={handleCreateTag}
+                                    disabled={!newTagName.trim() || creatingTag}
+                                >
+                                    {creatingTag
+                                        ? <ActivityIndicator size="small" color="#ffffff" />
+                                        : <Text style={styles.newTagButtonText}>+</Text>
+                                    }
+                                </TouchableOpacity>
+                            </View>
                         </>
                     )}
                 </ScrollView>
@@ -218,4 +257,16 @@ const styles = StyleSheet.create({
     loadingBox: { alignItems: 'center', marginTop: 32, gap: 8 },
     loadingText: { fontSize: 14, color: '#6c757d' },
     emptyText: { fontSize: 14, color: '#adb5bd', fontStyle: 'italic' },
+    newTagRow: { flexDirection: 'row', alignItems: 'center', marginTop: 10, gap: 8 },
+    newTagInput: {
+        flex: 1, backgroundColor: '#ffffff', borderRadius: 8,
+        paddingHorizontal: 12, paddingVertical: 9, fontSize: 14,
+        color: '#212529', borderWidth: 1, borderColor: '#dee2e6',
+    },
+    newTagButton: {
+        width: 38, height: 38, borderRadius: 19,
+        backgroundColor: '#228be6', justifyContent: 'center', alignItems: 'center',
+    },
+    newTagButtonDisabled: { backgroundColor: '#adb5bd' },
+    newTagButtonText: { color: '#ffffff', fontSize: 22, lineHeight: 26, fontWeight: '400' },
 });

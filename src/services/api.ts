@@ -130,6 +130,17 @@ export async function fetchTagsList(): Promise<Tag[]> {
     return items.map((t: any) => ({ id: t.id, name: t.name }));
 }
 
+export async function createTag(name: string): Promise<Tag> {
+    const response = await fetch(`${BASE_URL}/tags/`, {
+        method: 'POST',
+        headers: { Authorization: API_TOKEN, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    return { id: data.id, name: data.name };
+}
+
 export async function patchDocument(id: string, patch: DocumentPatch): Promise<void> {
     const response = await fetch(`${BASE_URL}/documents/${id}/`, {
         method: 'PATCH',
