@@ -3,8 +3,7 @@ import { StyleSheet, Text, View, FlatList, TouchableOpacity, TextInput, ListRend
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
-import { Document } from '../src/data/mockDocuments';
-import { fetchPaperlessDocuments } from '../src/services/api';
+import { Document, fetchPaperlessDocuments } from '../src/services/api';
 
 export default function HomeScreen() {
     const router = useRouter();
@@ -24,10 +23,11 @@ export default function HomeScreen() {
         loadData();
     }, []);
 
-    // Kategorien / Typen dynamisch aus den echten Dokumenten ermitteln
-    const categories = ['Alle', ...Array.from(new Set(documents.map((doc) => doc.document_type)))];
+    // Kategorien / Chips dynamisch aus allen verwendeten Tags ermitteln
+    const allTags = Array.from(new Set(documents.flatMap((doc) => doc.tags)));
+    const categories = ['Alle', ...allTags];
 
-    // Dokumente filtern nach Suchbegriff und gewähltem Typ
+    // Dokumente filtern nach Suchbegriff und gewähltem Tag
     const filteredDocuments = documents.filter((doc) => {
         const matchesSearch =
             doc.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -35,7 +35,7 @@ export default function HomeScreen() {
             doc.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
 
         const matchesCategory = selectedCategory && selectedCategory !== 'Alle'
-            ? doc.document_type === selectedCategory
+            ? doc.tags.some(tag => tag.toLowerCase() === selectedCategory.toLowerCase())
             : true;
 
         return matchesSearch && matchesCategory;
@@ -98,7 +98,7 @@ export default function HomeScreen() {
                 />
             </View>
 
-            {/* Filter Chips */}
+            {/* Filter Chips (jetzt basierend auf Tags) */}
             <View style={styles.filterContainer}>
                 <FlatList
                     horizontal
@@ -113,7 +113,9 @@ export default function HomeScreen() {
                                 style={[styles.chip, isSelected && styles.chipSelected]}
                                 onPress={() => setSelectedCategory(item)}
                             >
-                                <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>{item}</Text>
+                                <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
+                                    {item === 'Alle' ? 'Alle' : `#${item}`}
+                                </Text>
                             </TouchableOpacity>
                         );
                     }}

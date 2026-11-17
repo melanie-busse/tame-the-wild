@@ -1,10 +1,17 @@
 // src/services/api.ts
-import { Document } from '../data/mockDocuments';
 
-const API_URL = process.env.EXPO_PUBLIC_PAPERLESS_URL || '';
-const API_TOKEN = process.env.EXPO_PUBLIC_PAPERLESS_TOKEN || '';
+export const BASE_URL = (process.env.EXPO_PUBLIC_PAPERLESS_URL || '').replace(/\/documents\/?$/, '');
+export const API_TOKEN = process.env.EXPO_PUBLIC_PAPERLESS_TOKEN || '';
 
-const BASE_URL = API_URL.replace(/\/documents\/?$/, '');
+export interface Document {
+    id: string;
+    title: string;
+    created: string;
+    correspondent: string;
+    document_type: string;
+    tags: string[];
+    content?: string;
+}
 
 const headers = {
     'Authorization': API_TOKEN,
@@ -56,5 +63,36 @@ export async function fetchPaperlessDocuments(): Promise<Document[]> {
     } catch (error) {
         console.error('Error loading Paperless documents:', error);
         return [];
+    }
+}
+
+export async function fetchDocumentById(id: string): Promise<Document | null> {
+    try {
+        const [doc, correspondents, documentTypes, tags] = await Promise.all([
+            fetch(`${BASE_URL}/documents/${id}/`, { method: 'GET', headers }).then(r => {
+                if (!r.ok) throw new Error(`HTTP ${r.status}`);
+                return r.json();
+            }),
+            fetchAll(`${BASE_URL}/correspondents/`),
+            fetchAll(`${BASE_URL}/document_types/`),
+            fetchAll(`${BASE_URL}/tags/`),
+        ]);
+
+        const correspondentMap = buildLookup(correspondents);
+        const documentTypeMap = buildLookup(documentTypes);
+        const tagMap = buildLookup(tags);
+
+        return {
+            id: doc.id.toString(),
+            title: doc.title || 'Untitled',
+            created: doc.created ? doc.created.split('T')[0] : 'Unknown',
+            correspondent: doc.correspondent ? (correspondentMap[doc.correspondent] ?? doc.correspondent.toString()) : 'Kein Absender',
+            document_type: doc.document_type ? (documentTypeMap[doc.document_type] ?? doc.document_type.toString()) : 'Standard',
+            tags: doc.tags ? doc.tags.map((t: number) => tagMap[t] ?? t.toString()) : [],
+            content: doc.content || '',
+        };
+    } catch (error) {
+        console.error('Error loading document by ID:', error);
+        return null;
     }
 }
