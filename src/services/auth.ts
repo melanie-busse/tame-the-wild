@@ -59,10 +59,8 @@ export async function fetchToken(
 }
 
 export async function checkBiometricAvailable(): Promise<boolean> {
-    const hasHardware = await LocalAuthentication.hasHardwareAsync();
-    if (!hasHardware) return false;
-    const isEnrolled = await LocalAuthentication.isEnrolledAsync();
-    return isEnrolled;
+    const level = await LocalAuthentication.getEnrolledLevelAsync();
+    return level !== LocalAuthentication.SecurityLevel.NONE;
 }
 
 export async function authenticateBiometric(): Promise<boolean> {
