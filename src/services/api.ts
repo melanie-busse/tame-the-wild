@@ -59,7 +59,7 @@ export interface DocumentPatch {
 }
 
 const getHeaders = () => ({
-    'Authorization': _token,
+    'Authorization': `Token ${_token}`,
     'Content-Type': 'application/json',
 });
 
@@ -168,7 +168,7 @@ export async function fetchStorageLocations(): Promise<StorageLocation[]> {
 export async function createDocumentType(name: string): Promise<DocumentType> {
     const response = await fetch(`${_baseUrl}/document_types/`, {
         method: 'POST',
-        headers: { Authorization: _token, 'Content-Type': 'application/json' },
+        headers: { ...getHeaders(), 'Content-Type': 'application/json' },
         body: JSON.stringify({ name }),
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -179,7 +179,7 @@ export async function createDocumentType(name: string): Promise<DocumentType> {
 export async function createStorageLocation(name: string): Promise<StorageLocation> {
     const response = await fetch(`${_baseUrl}/storage_paths/`, {
         method: 'POST',
-        headers: { Authorization: _token, 'Content-Type': 'application/json' },
+        headers: { ...getHeaders(), 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, path: name }),
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -190,7 +190,7 @@ export async function createStorageLocation(name: string): Promise<StorageLocati
 export async function createTag(name: string): Promise<Tag> {
     const response = await fetch(`${_baseUrl}/tags/`, {
         method: 'POST',
-        headers: { Authorization: _token, 'Content-Type': 'application/json' },
+        headers: { ...getHeaders(), 'Content-Type': 'application/json' },
         body: JSON.stringify({ name }),
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -208,7 +208,7 @@ export async function fetchDocumentNotes(documentId: number): Promise<DocumentNo
 export async function addDocumentNote(documentId: number, note: string): Promise<void> {
     const response = await fetch(`${_baseUrl}/documents/${documentId}/notes/`, {
         method: 'POST',
-        headers: { Authorization: _token, 'Content-Type': 'application/json' },
+        headers: { ...getHeaders(), 'Content-Type': 'application/json' },
         body: JSON.stringify({ note }),
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -217,7 +217,7 @@ export async function addDocumentNote(documentId: number, note: string): Promise
 export async function patchDocument(id: string, patch: DocumentPatch): Promise<void> {
     const response = await fetch(`${_baseUrl}/documents/${id}/`, {
         method: 'PATCH',
-        headers: { Authorization: _token, 'Content-Type': 'application/json' },
+        headers: { ...getHeaders(), 'Content-Type': 'application/json' },
         body: JSON.stringify(patch),
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
