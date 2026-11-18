@@ -11,7 +11,7 @@ export type AuthState = 'loading' | 'unauthenticated' | 'needs_biometric' | 'aut
 export interface AuthContextValue {
     authState: AuthState;
     biometricAvailable: boolean;
-    login(url: string, token: string): void;
+    login(url: string, token: string): Promise<void>;
     logout(): Promise<void>;
     unlockBiometric(): Promise<void>;
 }
@@ -57,9 +57,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
         return () => sub.remove();
     }, []);
 
-    const login = (url: string, token: string) => {
+    const login = async (url: string, token: string) => {
         setApiCredentials(url, token);
         saveCredentials(url, token).catch(() => {/* best-effort; credentials already in memory */});
+        const available = await checkBiometricAvailable();
+        setBiometricAvailable(available);
         setAuthState('needs_biometric');
     };
 
