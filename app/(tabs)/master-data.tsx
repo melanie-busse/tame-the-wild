@@ -10,8 +10,10 @@ import {
     fetchTagsList, fetchDocumentTypes, fetchStorageLocations,
     createTag, createDocumentType, createStorageLocation,
 } from '../../src/services/api';
+import { useAuth } from '../../src/context/AuthContext';
 
 export default function MasterDataScreen() {
+    const auth = useAuth();
     const [tags, setTags] = useState<Tag[]>([]);
     const [documentTypes, setDocumentTypes] = useState<DocumentType[]>([]);
     const [storageLocations, setStorageLocations] = useState<StorageLocation[]>([]);
@@ -224,6 +226,10 @@ export default function MasterDataScreen() {
                     </TouchableOpacity>
                 </View>
 
+                <TouchableOpacity style={styles.logoutButton} onPress={auth.logout} activeOpacity={0.7}>
+                    <Text style={styles.logoutText}>Abmelden</Text>
+                </TouchableOpacity>
+
             </ScrollView>
         </SafeAreaView>
     );
@@ -265,4 +271,6 @@ const styles = StyleSheet.create({
         borderLeftWidth: 3, borderLeftColor: '#e7f5ff',
     },
     rowText: { fontSize: 15, color: '#495057' },
+    logoutButton: { marginTop: 32, alignItems: 'center', paddingVertical: 12 },
+    logoutText: { color: '#fa5252', fontSize: 15, fontWeight: '600' },
 });
