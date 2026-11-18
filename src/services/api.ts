@@ -150,6 +150,28 @@ export async function fetchStorageLocations(): Promise<StorageLocation[]> {
     return items.map((s: any) => ({ id: s.id, name: s.name }));
 }
 
+export async function createDocumentType(name: string): Promise<DocumentType> {
+    const response = await fetch(`${BASE_URL}/document_types/`, {
+        method: 'POST',
+        headers: { Authorization: API_TOKEN, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    return { id: data.id, name: data.name };
+}
+
+export async function createStorageLocation(name: string): Promise<StorageLocation> {
+    const response = await fetch(`${BASE_URL}/storage_paths/`, {
+        method: 'POST',
+        headers: { Authorization: API_TOKEN, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, path: name }),
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    return { id: data.id, name: data.name };
+}
+
 export async function createTag(name: string): Promise<Tag> {
     const response = await fetch(`${BASE_URL}/tags/`, {
         method: 'POST',

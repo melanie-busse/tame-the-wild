@@ -7,7 +7,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from 'expo-router';
 import {
     Tag, DocumentType, StorageLocation,
-    fetchTagsList, fetchDocumentTypes, fetchStorageLocations, createTag,
+    fetchTagsList, fetchDocumentTypes, fetchStorageLocations,
+    createTag, createDocumentType, createStorageLocation,
 } from '../../src/services/api';
 
 export default function MasterDataScreen() {
@@ -18,6 +19,10 @@ export default function MasterDataScreen() {
     const [error, setError] = useState<string | null>(null);
     const [newTagName, setNewTagName] = useState('');
     const [creatingTag, setCreatingTag] = useState(false);
+    const [newDocTypeName, setNewDocTypeName] = useState('');
+    const [creatingDocType, setCreatingDocType] = useState(false);
+    const [newStorageName, setNewStorageName] = useState('');
+    const [creatingStorage, setCreatingStorage] = useState(false);
 
     useFocusEffect(
         useCallback(() => {
@@ -55,6 +60,36 @@ export default function MasterDataScreen() {
             Alert.alert('Fehler', `Tag „${name}" konnte nicht angelegt werden.`);
         } finally {
             setCreatingTag(false);
+        }
+    };
+
+    const handleCreateDocType = async () => {
+        const name = newDocTypeName.trim();
+        if (!name) return;
+        setCreatingDocType(true);
+        try {
+            const newItem = await createDocumentType(name);
+            setDocumentTypes(prev => [...prev, newItem]);
+            setNewDocTypeName('');
+        } catch {
+            Alert.alert('Fehler', `Dokumententyp „${name}" konnte nicht angelegt werden.`);
+        } finally {
+            setCreatingDocType(false);
+        }
+    };
+
+    const handleCreateStorage = async () => {
+        const name = newStorageName.trim();
+        if (!name) return;
+        setCreatingStorage(true);
+        try {
+            const newItem = await createStorageLocation(name);
+            setStorageLocations(prev => [...prev, newItem]);
+            setNewStorageName('');
+        } catch {
+            Alert.alert('Fehler', `Speicherort „${name}" konnte nicht angelegt werden.`);
+        } finally {
+            setCreatingStorage(false);
         }
     };
 
@@ -132,6 +167,28 @@ export default function MasterDataScreen() {
                 ) : (
                     <Text style={styles.emptyText}>Keine Einträge vorhanden</Text>
                 )}
+                <View style={styles.newTagRow}>
+                    <TextInput
+                        style={styles.newTagInput}
+                        value={newDocTypeName}
+                        onChangeText={setNewDocTypeName}
+                        placeholder="Neuer Dokumententyp hinzufügen…"
+                        placeholderTextColor="#adb5bd"
+                        onSubmitEditing={handleCreateDocType}
+                        returnKeyType="done"
+                        editable={!creatingDocType}
+                    />
+                    <TouchableOpacity
+                        style={[styles.newTagButton, (!newDocTypeName.trim() || creatingDocType) && styles.newTagButtonDisabled]}
+                        onPress={handleCreateDocType}
+                        disabled={!newDocTypeName.trim() || creatingDocType}
+                    >
+                        {creatingDocType
+                            ? <ActivityIndicator size="small" color="#ffffff" />
+                            : <Text style={styles.newTagButtonText}>+</Text>
+                        }
+                    </TouchableOpacity>
+                </View>
 
                 {/* Speicherorte */}
                 <Text style={styles.sectionLabel}>Speicherorte</Text>
@@ -144,6 +201,28 @@ export default function MasterDataScreen() {
                 ) : (
                     <Text style={styles.emptyText}>Keine Einträge vorhanden</Text>
                 )}
+                <View style={styles.newTagRow}>
+                    <TextInput
+                        style={styles.newTagInput}
+                        value={newStorageName}
+                        onChangeText={setNewStorageName}
+                        placeholder="Neuer Speicherort hinzufügen…"
+                        placeholderTextColor="#adb5bd"
+                        onSubmitEditing={handleCreateStorage}
+                        returnKeyType="done"
+                        editable={!creatingStorage}
+                    />
+                    <TouchableOpacity
+                        style={[styles.newTagButton, (!newStorageName.trim() || creatingStorage) && styles.newTagButtonDisabled]}
+                        onPress={handleCreateStorage}
+                        disabled={!newStorageName.trim() || creatingStorage}
+                    >
+                        {creatingStorage
+                            ? <ActivityIndicator size="small" color="#ffffff" />
+                            : <Text style={styles.newTagButtonText}>+</Text>
+                        }
+                    </TouchableOpacity>
+                </View>
 
             </ScrollView>
         </SafeAreaView>
