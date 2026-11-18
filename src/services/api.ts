@@ -13,6 +13,16 @@ export interface Tag {
     name: string;
 }
 
+export interface DocumentType {
+    id: number;
+    name: string;
+}
+
+export interface StorageLocation {
+    id: number;
+    name: string;
+}
+
 export interface Document {
     id: string;
     title: string;
@@ -128,6 +138,16 @@ export async function fetchCorrespondentsList(): Promise<Correspondent[]> {
 export async function fetchTagsList(): Promise<Tag[]> {
     const items = await fetchAll(`${BASE_URL}/tags/`);
     return items.map((t: any) => ({ id: t.id, name: t.name }));
+}
+
+export async function fetchDocumentTypes(): Promise<DocumentType[]> {
+    const items = await fetchAll(`${BASE_URL}/document_types/`);
+    return items.map((d: any) => ({ id: d.id, name: d.name }));
+}
+
+export async function fetchStorageLocations(): Promise<StorageLocation[]> {
+    const items = await fetchAll(`${BASE_URL}/storage_paths/`);
+    return items.map((s: any) => ({ id: s.id, name: s.name }));
 }
 
 export async function createTag(name: string): Promise<Tag> {
