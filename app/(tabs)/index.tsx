@@ -3,7 +3,7 @@ import { StyleSheet, Text, View, FlatList, TouchableOpacity, TextInput, ListRend
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
-import { Document, fetchPaperlessDocuments } from '../src/services/api';
+import { Document, fetchPaperlessDocuments } from '../../src/services/api';
 
 export default function HomeScreen() {
     const router = useRouter();
@@ -75,7 +75,7 @@ export default function HomeScreen() {
                     <View style={styles.headerLeftGroup}>
                         <View style={styles.logoBadge}>
                             <Image
-                                source={require('../assets/images/westie-logo.png')}
+                                source={require('../../assets/images/westie-logo.png')}
                                 style={styles.logoImage}
                             />
                         </View>

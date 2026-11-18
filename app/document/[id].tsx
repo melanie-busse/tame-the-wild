@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
     StyleSheet, Text, View, ActivityIndicator, ScrollView,
     TouchableOpacity, Alert, Modal, Dimensions, Platform,
-    Image as RNImage,
+    Image as RNImage, TextInput,
 } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -10,7 +10,7 @@ import { Image } from 'expo-image';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Print from 'expo-print';
 import Pdf from 'react-native-pdf';
-import { Document, fetchDocumentById, BASE_URL, API_TOKEN } from '../../src/services/api';
+import { Document, DocumentNote, fetchDocumentById, fetchDocumentNotes, addDocumentNote, BASE_URL, API_TOKEN } from '../../src/services/api';
 import EditDocumentModal, { SavedFields } from '../../components/EditDocumentModal';
 
 function isImageMime(mimeType?: string): boolean {
@@ -31,6 +31,10 @@ export default function DocumentDetailScreen() {
     const [pdfDownloading, setPdfDownloading] = useState(false);
     const [editModalVisible, setEditModalVisible] = useState(false);
     const [printing, setPrinting] = useState(false);
+    const [notes, setNotes] = useState<DocumentNote[]>([]);
+    const [notesLoading, setNotesLoading] = useState(true);
+    const [newNoteText, setNewNoteText] = useState('');
+    const [addingNote, setAddingNote] = useState(false);
 
     useEffect(() => {
         async function load() {
@@ -45,6 +49,33 @@ export default function DocumentDetailScreen() {
         }
         load();
     }, [docId]);
+
+    useEffect(() => {
+        const numId = parseInt(docId, 10);
+        if (!numId) return;
+        setNotesLoading(true);
+        fetchDocumentNotes(numId)
+            .then(setNotes)
+            .catch(() => {/* notes failure is non-fatal */})
+            .finally(() => setNotesLoading(false));
+    }, [docId]);
+
+    const handleAddNote = async () => {
+        const text = newNoteText.trim();
+        if (!text) return;
+        const numId = parseInt(docId, 10);
+        setAddingNote(true);
+        try {
+            await addDocumentNote(numId, text);
+            const updated = await fetchDocumentNotes(numId);
+            setNotes(updated);
+            setNewNoteText('');
+        } catch {
+            Alert.alert('Fehler', 'Notiz konnte nicht gespeichert werden.');
+        } finally {
+            setAddingNote(false);
+        }
+    };
 
     const handleThumbnailPress = async () => {
         const isImage = isImageMime(document?.mime_type);
@@ -243,6 +274,45 @@ export default function DocumentDetailScreen() {
                         </View>
                     )}
 
+                    {/* Notizen */}
+                    <View style={styles.notesSection}>
+                        <Text style={styles.metaLabel}>Notizen</Text>
+                        {notesLoading ? (
+                            <ActivityIndicator size="small" color="#228be6" style={{ marginVertical: 8 }} />
+                        ) : notes.length > 0 ? (
+                            notes.map(n => (
+                                <View key={n.id} style={styles.noteCard}>
+                                    <Text style={styles.noteText}>{n.note}</Text>
+                                    <Text style={styles.noteDate}>{n.created.replace('T', '  ').slice(0, 19)}</Text>
+                                </View>
+                            ))
+                        ) : (
+                            <Text style={styles.noTagsText}>Noch keine Notizen vorhanden</Text>
+                        )}
+                        <View style={styles.noteInputRow}>
+                            <TextInput
+                                style={styles.noteInput}
+                                value={newNoteText}
+                                onChangeText={setNewNoteText}
+                                placeholder="Neue Notiz…"
+                                placeholderTextColor="#adb5bd"
+                                multiline
+                                editable={!addingNote}
+                            />
+                            <TouchableOpacity
+                                style={[styles.noteAddButton, (!newNoteText.trim() || addingNote) && styles.noteAddButtonDisabled]}
+                                onPress={handleAddNote}
+                                disabled={!newNoteText.trim() || addingNote}
+                                activeOpacity={0.7}
+                            >
+                                {addingNote
+                                    ? <ActivityIndicator size="small" color="#ffffff" />
+                                    : <Text style={styles.noteAddButtonText}>+</Text>
+                                }
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+
                 </View>
             </ScrollView>
 
@@ -338,6 +408,24 @@ const styles = StyleSheet.create({
     ocrSection: { borderTopWidth: 1, borderTopColor: '#f1f3f5', paddingTop: 12, marginTop: 4 },
     ocrScroll: { maxHeight: 220, backgroundColor: '#f8f9fa', borderRadius: 8, padding: 10, marginTop: 6 },
     ocrText: { fontSize: 13, color: '#495057', lineHeight: 20, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
+
+    notesSection: { borderTopWidth: 1, borderTopColor: '#f1f3f5', paddingTop: 12, marginTop: 4 },
+    noteCard: { backgroundColor: '#f8f9fa', borderRadius: 8, padding: 10, marginBottom: 8 },
+    noteText: { fontSize: 14, color: '#212529', lineHeight: 20 },
+    noteDate: { fontSize: 11, color: '#adb5bd', marginTop: 4 },
+    noteInputRow: { flexDirection: 'row', alignItems: 'flex-end', marginTop: 10, gap: 8 },
+    noteInput: {
+        flex: 1, backgroundColor: '#ffffff', borderRadius: 8,
+        paddingHorizontal: 12, paddingVertical: 9, fontSize: 14,
+        color: '#212529', borderWidth: 1, borderColor: '#dee2e6',
+        maxHeight: 100,
+    },
+    noteAddButton: {
+        width: 38, height: 38, borderRadius: 19,
+        backgroundColor: '#228be6', justifyContent: 'center', alignItems: 'center',
+    },
+    noteAddButtonDisabled: { backgroundColor: '#adb5bd' },
+    noteAddButtonText: { color: '#ffffff', fontSize: 22, lineHeight: 26, fontWeight: '400' },
 
     loadingText: { marginTop: 10, color: '#6c757d', fontSize: 14 },
     errorText: { fontSize: 16, color: '#fa5252', fontWeight: '600' },

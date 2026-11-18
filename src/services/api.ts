@@ -13,6 +13,16 @@ export interface Tag {
     name: string;
 }
 
+export interface DocumentType {
+    id: number;
+    name: string;
+}
+
+export interface StorageLocation {
+    id: number;
+    name: string;
+}
+
 export interface Document {
     id: string;
     title: string;
@@ -24,6 +34,13 @@ export interface Document {
     tagIds?: number[];
     content?: string;
     mime_type?: string;
+}
+
+export interface DocumentNote {
+    id: number;
+    note: string;
+    created: string;
+    user?: number | null;
 }
 
 export interface DocumentPatch {
@@ -130,6 +147,38 @@ export async function fetchTagsList(): Promise<Tag[]> {
     return items.map((t: any) => ({ id: t.id, name: t.name }));
 }
 
+export async function fetchDocumentTypes(): Promise<DocumentType[]> {
+    const items = await fetchAll(`${BASE_URL}/document_types/`);
+    return items.map((d: any) => ({ id: d.id, name: d.name }));
+}
+
+export async function fetchStorageLocations(): Promise<StorageLocation[]> {
+    const items = await fetchAll(`${BASE_URL}/storage_paths/`);
+    return items.map((s: any) => ({ id: s.id, name: s.name }));
+}
+
+export async function createDocumentType(name: string): Promise<DocumentType> {
+    const response = await fetch(`${BASE_URL}/document_types/`, {
+        method: 'POST',
+        headers: { Authorization: API_TOKEN, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    return { id: data.id, name: data.name };
+}
+
+export async function createStorageLocation(name: string): Promise<StorageLocation> {
+    const response = await fetch(`${BASE_URL}/storage_paths/`, {
+        method: 'POST',
+        headers: { Authorization: API_TOKEN, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, path: name }),
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    return { id: data.id, name: data.name };
+}
+
 export async function createTag(name: string): Promise<Tag> {
     const response = await fetch(`${BASE_URL}/tags/`, {
         method: 'POST',
@@ -139,6 +188,22 @@ export async function createTag(name: string): Promise<Tag> {
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
     return { id: data.id, name: data.name };
+}
+
+export async function fetchDocumentNotes(documentId: number): Promise<DocumentNote[]> {
+    const response = await fetch(`${BASE_URL}/documents/${documentId}/notes/`, { method: 'GET', headers });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    return data;
+}
+
+export async function addDocumentNote(documentId: number, note: string): Promise<void> {
+    const response = await fetch(`${BASE_URL}/documents/${documentId}/notes/`, {
+        method: 'POST',
+        headers: { Authorization: API_TOKEN, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ note }),
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
 }
 
 export async function patchDocument(id: string, patch: DocumentPatch): Promise<void> {
