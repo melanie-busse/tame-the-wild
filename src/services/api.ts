@@ -36,6 +36,13 @@ export interface Document {
     mime_type?: string;
 }
 
+export interface DocumentNote {
+    id: number;
+    note: string;
+    created: string;
+    user?: number | null;
+}
+
 export interface DocumentPatch {
     title?: string;
     created?: string;
@@ -181,6 +188,22 @@ export async function createTag(name: string): Promise<Tag> {
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
     return { id: data.id, name: data.name };
+}
+
+export async function fetchDocumentNotes(documentId: number): Promise<DocumentNote[]> {
+    const response = await fetch(`${BASE_URL}/documents/${documentId}/notes/`, { method: 'GET', headers });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    return data;
+}
+
+export async function addDocumentNote(documentId: number, note: string): Promise<void> {
+    const response = await fetch(`${BASE_URL}/documents/${documentId}/notes/`, {
+        method: 'POST',
+        headers: { Authorization: API_TOKEN, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ note }),
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
 }
 
 export async function patchDocument(id: string, patch: DocumentPatch): Promise<void> {
