@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import {
     StyleSheet, Text, View, ScrollView, TextInput,
-    TouchableOpacity, ActivityIndicator,
+    TouchableOpacity, ActivityIndicator, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from 'expo-router';
@@ -52,7 +52,7 @@ export default function MasterDataScreen() {
             setTags(prev => [...prev, newTag]);
             setNewTagName('');
         } catch {
-            // inline error not shown to keep UX simple; tag list unchanged
+            Alert.alert('Fehler', `Tag „${name}" konnte nicht angelegt werden.`);
         } finally {
             setCreatingTag(false);
         }
