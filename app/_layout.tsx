@@ -12,8 +12,8 @@ export default function RootLayout() {
                 }}
             >
                 <Stack.Screen
-                    name="index"
-                    options={{ title: 'TameTheWild', headerShown: false }}
+                    name="(tabs)"
+                    options={{ headerShown: false }}
                 />
                 <Stack.Screen
                     name="document/[id]"
