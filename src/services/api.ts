@@ -1,7 +1,15 @@
 // src/services/api.ts
 
-export const BASE_URL = (process.env.EXPO_PUBLIC_PAPERLESS_URL || '').replace(/\/documents\/?$/, '');
-export const API_TOKEN = process.env.EXPO_PUBLIC_PAPERLESS_TOKEN || '';
+let _baseUrl = '';
+let _token   = '';
+
+export function setApiCredentials(url: string, token: string): void {
+    _baseUrl = url;
+    _token   = token;
+}
+
+export const getBaseUrl  = (): string => _baseUrl;
+export const getApiToken = (): string => _token;
 
 export interface Correspondent {
     id: number;
@@ -50,16 +58,16 @@ export interface DocumentPatch {
     tags?: number[];
 }
 
-const headers = {
-    'Authorization': API_TOKEN,
+const getHeaders = () => ({
+    'Authorization': _token,
     'Content-Type': 'application/json',
-};
+});
 
 async function fetchAll(url: string): Promise<any[]> {
     const results: any[] = [];
     let nextUrl: string | null = url;
     while (nextUrl) {
-        const response: Response = await fetch(nextUrl, { method: 'GET', headers });
+        const response: Response = await fetch(nextUrl, { method: 'GET', headers: getHeaders() });
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         const data: { results: any[]; next: string | null } = await response.json();
         results.push(...data.results);
@@ -79,10 +87,10 @@ function buildLookup(items: any[]): Record<number, string> {
 export async function fetchPaperlessDocuments(): Promise<Document[]> {
     try {
         const [docs, correspondents, documentTypes, tags] = await Promise.all([
-            fetchAll(`${BASE_URL}/documents/`),
-            fetchAll(`${BASE_URL}/correspondents/`),
-            fetchAll(`${BASE_URL}/document_types/`),
-            fetchAll(`${BASE_URL}/tags/`),
+            fetchAll(`${_baseUrl}/documents/`),
+            fetchAll(`${_baseUrl}/correspondents/`),
+            fetchAll(`${_baseUrl}/document_types/`),
+            fetchAll(`${_baseUrl}/tags/`),
         ]);
 
         const correspondentMap = buildLookup(correspondents);
@@ -106,13 +114,13 @@ export async function fetchPaperlessDocuments(): Promise<Document[]> {
 export async function fetchDocumentById(id: string): Promise<Document | null> {
     try {
         const [doc, correspondents, documentTypes, tags] = await Promise.all([
-            fetch(`${BASE_URL}/documents/${id}/`, { method: 'GET', headers }).then(r => {
+            fetch(`${_baseUrl}/documents/${id}/`, { method: 'GET', headers: getHeaders() }).then(r => {
                 if (!r.ok) throw new Error(`HTTP ${r.status}`);
                 return r.json();
             }),
-            fetchAll(`${BASE_URL}/correspondents/`),
-            fetchAll(`${BASE_URL}/document_types/`),
-            fetchAll(`${BASE_URL}/tags/`),
+            fetchAll(`${_baseUrl}/correspondents/`),
+            fetchAll(`${_baseUrl}/document_types/`),
+            fetchAll(`${_baseUrl}/tags/`),
         ]);
 
         const correspondentMap = buildLookup(correspondents);
@@ -138,29 +146,29 @@ export async function fetchDocumentById(id: string): Promise<Document | null> {
 }
 
 export async function fetchCorrespondentsList(): Promise<Correspondent[]> {
-    const items = await fetchAll(`${BASE_URL}/correspondents/`);
+    const items = await fetchAll(`${_baseUrl}/correspondents/`);
     return items.map((c: any) => ({ id: c.id, name: c.name }));
 }
 
 export async function fetchTagsList(): Promise<Tag[]> {
-    const items = await fetchAll(`${BASE_URL}/tags/`);
+    const items = await fetchAll(`${_baseUrl}/tags/`);
     return items.map((t: any) => ({ id: t.id, name: t.name }));
 }
 
 export async function fetchDocumentTypes(): Promise<DocumentType[]> {
-    const items = await fetchAll(`${BASE_URL}/document_types/`);
+    const items = await fetchAll(`${_baseUrl}/document_types/`);
     return items.map((d: any) => ({ id: d.id, name: d.name }));
 }
 
 export async function fetchStorageLocations(): Promise<StorageLocation[]> {
-    const items = await fetchAll(`${BASE_URL}/storage_paths/`);
+    const items = await fetchAll(`${_baseUrl}/storage_paths/`);
     return items.map((s: any) => ({ id: s.id, name: s.name }));
 }
 
 export async function createDocumentType(name: string): Promise<DocumentType> {
-    const response = await fetch(`${BASE_URL}/document_types/`, {
+    const response = await fetch(`${_baseUrl}/document_types/`, {
         method: 'POST',
-        headers: { Authorization: API_TOKEN, 'Content-Type': 'application/json' },
+        headers: { Authorization: _token, 'Content-Type': 'application/json' },
         body: JSON.stringify({ name }),
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -169,9 +177,9 @@ export async function createDocumentType(name: string): Promise<DocumentType> {
 }
 
 export async function createStorageLocation(name: string): Promise<StorageLocation> {
-    const response = await fetch(`${BASE_URL}/storage_paths/`, {
+    const response = await fetch(`${_baseUrl}/storage_paths/`, {
         method: 'POST',
-        headers: { Authorization: API_TOKEN, 'Content-Type': 'application/json' },
+        headers: { Authorization: _token, 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, path: name }),
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -180,9 +188,9 @@ export async function createStorageLocation(name: string): Promise<StorageLocati
 }
 
 export async function createTag(name: string): Promise<Tag> {
-    const response = await fetch(`${BASE_URL}/tags/`, {
+    const response = await fetch(`${_baseUrl}/tags/`, {
         method: 'POST',
-        headers: { Authorization: API_TOKEN, 'Content-Type': 'application/json' },
+        headers: { Authorization: _token, 'Content-Type': 'application/json' },
         body: JSON.stringify({ name }),
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -191,25 +199,25 @@ export async function createTag(name: string): Promise<Tag> {
 }
 
 export async function fetchDocumentNotes(documentId: number): Promise<DocumentNote[]> {
-    const response = await fetch(`${BASE_URL}/documents/${documentId}/notes/`, { method: 'GET', headers });
+    const response = await fetch(`${_baseUrl}/documents/${documentId}/notes/`, { method: 'GET', headers: getHeaders() });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
     return data;
 }
 
 export async function addDocumentNote(documentId: number, note: string): Promise<void> {
-    const response = await fetch(`${BASE_URL}/documents/${documentId}/notes/`, {
+    const response = await fetch(`${_baseUrl}/documents/${documentId}/notes/`, {
         method: 'POST',
-        headers: { Authorization: API_TOKEN, 'Content-Type': 'application/json' },
+        headers: { Authorization: _token, 'Content-Type': 'application/json' },
         body: JSON.stringify({ note }),
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
 }
 
 export async function patchDocument(id: string, patch: DocumentPatch): Promise<void> {
-    const response = await fetch(`${BASE_URL}/documents/${id}/`, {
+    const response = await fetch(`${_baseUrl}/documents/${id}/`, {
         method: 'PATCH',
-        headers: { Authorization: API_TOKEN, 'Content-Type': 'application/json' },
+        headers: { Authorization: _token, 'Content-Type': 'application/json' },
         body: JSON.stringify(patch),
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);

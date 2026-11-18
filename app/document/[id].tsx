@@ -10,7 +10,7 @@ import { Image } from 'expo-image';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Print from 'expo-print';
 import Pdf from 'react-native-pdf';
-import { Document, DocumentNote, fetchDocumentById, fetchDocumentNotes, addDocumentNote, BASE_URL, API_TOKEN } from '../../src/services/api';
+import { Document, DocumentNote, fetchDocumentById, fetchDocumentNotes, addDocumentNote, getBaseUrl, getApiToken } from '../../src/services/api';
 import EditDocumentModal, { SavedFields } from '../../components/EditDocumentModal';
 
 function isImageMime(mimeType?: string): boolean {
@@ -93,14 +93,14 @@ export default function DocumentDetailScreen() {
         try {
             const info = await FileSystem.getInfoAsync(localPath);
             const downloadUrl = isImage
-                ? `${BASE_URL}/documents/${docId}/download/?original=true`
-                : `${BASE_URL}/documents/${docId}/download/`;
+                ? `${getBaseUrl()}/documents/${docId}/download/?original=true`
+                : `${getBaseUrl()}/documents/${docId}/download/`;
             const uri = info.exists
                 ? localPath
                 : (await FileSystem.downloadAsync(
                     downloadUrl,
                     localPath,
-                    { headers: { Authorization: API_TOKEN } }
+                    { headers: { Authorization: getApiToken() } }
                 )).uri;
 
             if (isImage) {
@@ -129,10 +129,10 @@ export default function DocumentDetailScreen() {
             const info = await FileSystem.getInfoAsync(localPath);
             if (!info.exists) {
                 const downloadUrl = isImage
-                    ? `${BASE_URL}/documents/${docId}/download/?original=true`
-                    : `${BASE_URL}/documents/${docId}/download/`;
+                    ? `${getBaseUrl()}/documents/${docId}/download/?original=true`
+                    : `${getBaseUrl()}/documents/${docId}/download/`;
                 const result = await FileSystem.downloadAsync(downloadUrl, localPath, {
-                    headers: { Authorization: API_TOKEN },
+                    headers: { Authorization: getApiToken() },
                 });
                 uri = result.uri;
             }
@@ -184,7 +184,7 @@ export default function DocumentDetailScreen() {
         );
     }
 
-    const thumbnailUrl = `${BASE_URL}/documents/${docId}/thumb/`;
+    const thumbnailUrl = `${getBaseUrl()}/documents/${docId}/thumb/`;
 
     return (
         <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
@@ -229,7 +229,7 @@ export default function DocumentDetailScreen() {
                         activeOpacity={0.85}
                     >
                         <Image
-                            source={{ uri: thumbnailUrl, headers: { Authorization: API_TOKEN } }}
+                            source={{ uri: thumbnailUrl, headers: { Authorization: getApiToken() } }}
                             style={styles.thumbnail}
                             contentFit="contain"
                             transition={200}
