@@ -100,7 +100,7 @@ export default function DocumentDetailScreen() {
                 : (await FileSystem.downloadAsync(
                     downloadUrl,
                     localPath,
-                    { headers: { Authorization: getApiToken() } }
+                    { headers: { Authorization: `Token ${getApiToken()}` } }
                 )).uri;
 
             if (isImage) {
@@ -229,7 +229,7 @@ export default function DocumentDetailScreen() {
                         activeOpacity={0.85}
                     >
                         <Image
-                            source={{ uri: thumbnailUrl, headers: { Authorization: getApiToken() } }}
+                            source={{ uri: thumbnailUrl, headers: { Authorization: `Token ${getApiToken()}` } }}
                             style={styles.thumbnail}
                             contentFit="contain"
                             transition={200}
