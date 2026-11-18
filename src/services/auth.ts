@@ -5,11 +5,17 @@ const KEY_URL   = 'PAPERLESS_URL';
 const KEY_TOKEN = 'PAPERLESS_TOKEN';
 
 export function normalizeBaseUrl(raw: string): string {
-    return raw
+    // Normalize to https://host/api — the base every api.ts endpoint appends /documents/ etc. to.
+    // Strip /documents (and anything deeper), then trailing slash.
+    // If the result doesn't end with /api, append it so endpoint paths always resolve correctly.
+    const stripped = raw
         .trim()
-        .replace(/\/documents\/?$/, '')
-        .replace(/\/api\/?$/, '')
+        .replace(/\/documents(\/.*)?$/, '')
         .replace(/\/$/, '');
+    if (!stripped.endsWith('/api')) {
+        return stripped + '/api';
+    }
+    return stripped;
 }
 
 export async function saveCredentials(url: string, token: string): Promise<void> {
@@ -34,7 +40,8 @@ export async function fetchToken(
     username: string,
     password: string,
 ): Promise<string> {
-    const base = normalizeBaseUrl(serverUrl);
+    // fetchToken needs the pure host (no /api), since it appends /api/token/ itself.
+    const base = normalizeBaseUrl(serverUrl).replace(/\/api$/, '');
     let response: Response;
     try {
         response = await fetch(`${base}/api/token/`, {
