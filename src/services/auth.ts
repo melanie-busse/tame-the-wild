@@ -27,7 +27,8 @@ export async function loadCredentials(): Promise<{ url: string; token: string } 
     const url   = await SecureStore.getItemAsync(KEY_URL);
     const token = await SecureStore.getItemAsync(KEY_TOKEN);
     if (!url || !token) return null;
-    return { url, token };
+    // Re-normalize on load so stale stored URLs (without /api) are corrected automatically.
+    return { url: normalizeBaseUrl(url), token };
 }
 
 export async function clearCredentials(): Promise<void> {
