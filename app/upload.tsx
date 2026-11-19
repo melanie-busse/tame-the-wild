@@ -42,7 +42,7 @@ export default function UploadScreen() {
             const raw = e instanceof Error ? e.message : String(e);
             const msg = raw.startsWith('HTTP')
                 ? `Server-Fehler: ${raw}`
-                : `Fehler: ${raw}`;
+                : 'Netzwerkfehler – bitte Verbindung prüfen.';
             setError(msg);
         } finally {
             setUploading(false);
