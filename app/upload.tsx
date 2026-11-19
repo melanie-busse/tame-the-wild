@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     StyleSheet, Text, View, TextInput,
     TouchableOpacity, ActivityIndicator, Alert, ScrollView,
@@ -6,15 +6,50 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as DocumentPicker from 'expo-document-picker';
-import { uploadDocument } from '../src/services/api';
+import {
+    uploadDocument,
+    fetchCorrespondentsList, fetchTagsList, fetchStorageLocations,
+    Correspondent, Tag, StorageLocation,
+} from '../src/services/api';
 
 export default function UploadScreen() {
     const router = useRouter();
+
+    // file
     const [fileUri, setFileUri] = useState<string | null>(null);
     const [fileName, setFileName] = useState('');
     const [title, setTitle] = useState('');
+
+    // metadata selections
+    const [correspondentId, setCorrespondentId] = useState<number | null>(null);
+    const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
+    const [storagePathId, setStoragePathId] = useState<number | null>(null);
+
+    // master data
+    const [correspondents, setCorrespondents] = useState<Correspondent[]>([]);
+    const [tags, setTags] = useState<Tag[]>([]);
+    const [storagePaths, setStoragePaths] = useState<StorageLocation[]>([]);
+    const [masterDataLoading, setMasterDataLoading] = useState(true);
+    const [masterDataError, setMasterDataError] = useState<string | null>(null);
+
+    // upload
     const [uploading, setUploading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        Promise.all([
+            fetchCorrespondentsList(),
+            fetchTagsList(),
+            fetchStorageLocations(),
+        ])
+            .then(([c, t, s]) => {
+                setCorrespondents(c);
+                setTags(t);
+                setStoragePaths(s);
+            })
+            .catch(() => setMasterDataError('Stammdaten konnten nicht geladen werden.'))
+            .finally(() => setMasterDataLoading(false));
+    }, []);
 
     const handlePickFile = async () => {
         const result = await DocumentPicker.getDocumentAsync({
@@ -29,12 +64,25 @@ export default function UploadScreen() {
         setError(null);
     };
 
+    const toggleTag = (id: number) => {
+        setSelectedTagIds(prev =>
+            prev.includes(id) ? prev.filter(t => t !== id) : [...prev, id]
+        );
+    };
+
     const handleUpload = async () => {
         if (!fileUri || !fileName) return;
         setUploading(true);
         setError(null);
         try {
-            await uploadDocument(fileUri, fileName, title || fileName);
+            await uploadDocument(
+                fileUri,
+                fileName,
+                title || fileName,
+                correspondentId,
+                selectedTagIds,
+                storagePathId,
+            );
             Alert.alert('Erfolg', 'Dokument wurde hochgeladen.', [
                 { text: 'OK', onPress: () => router.back() },
             ]);
@@ -53,6 +101,7 @@ export default function UploadScreen() {
         <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
             <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
 
+                {/* File picker */}
                 <TouchableOpacity style={styles.pickButton} onPress={handlePickFile} activeOpacity={0.7}>
                     <Text style={styles.pickButtonText}>📎  PDF auswählen</Text>
                 </TouchableOpacity>
@@ -64,6 +113,7 @@ export default function UploadScreen() {
                             <Text style={styles.fileCardName} numberOfLines={2}>{fileName}</Text>
                         </View>
 
+                        {/* Title */}
                         <Text style={styles.fieldLabel}>Dokumenttitel</Text>
                         <TextInput
                             style={styles.input}
@@ -74,6 +124,89 @@ export default function UploadScreen() {
                             editable={!uploading}
                             returnKeyType="done"
                         />
+
+                        {/* Master data */}
+                        {masterDataLoading ? (
+                            <View style={styles.mdLoading}>
+                                <ActivityIndicator size="small" color="#228be6" />
+                                <Text style={styles.mdLoadingText}>Stammdaten werden geladen…</Text>
+                            </View>
+                        ) : (
+                            <>
+                                {masterDataError && (
+                                    <Text style={styles.mdErrorText}>{masterDataError} Upload ist trotzdem möglich.</Text>
+                                )}
+
+                                {/* Correspondent */}
+                                {correspondents.length > 0 && (
+                                    <>
+                                        <Text style={styles.fieldLabel}>Absender (optional)</Text>
+                                        <View style={styles.chipRow}>
+                                            <TouchableOpacity
+                                                style={[styles.chip, correspondentId === null && styles.chipSelected]}
+                                                onPress={() => setCorrespondentId(null)}
+                                            >
+                                                <Text style={[styles.chipText, correspondentId === null && styles.chipTextSelected]}>Kein Absender</Text>
+                                            </TouchableOpacity>
+                                            {correspondents.map(c => (
+                                                <TouchableOpacity
+                                                    key={c.id}
+                                                    style={[styles.chip, correspondentId === c.id && styles.chipSelected]}
+                                                    onPress={() => setCorrespondentId(correspondentId === c.id ? null : c.id)}
+                                                >
+                                                    <Text style={[styles.chipText, correspondentId === c.id && styles.chipTextSelected]}>{c.name}</Text>
+                                                </TouchableOpacity>
+                                            ))}
+                                        </View>
+                                    </>
+                                )}
+
+                                {/* Tags */}
+                                {tags.length > 0 && (
+                                    <>
+                                        <Text style={styles.fieldLabel}>Tags (optional, Mehrfachauswahl)</Text>
+                                        <View style={styles.chipRow}>
+                                            {tags.map(t => {
+                                                const selected = selectedTagIds.includes(t.id);
+                                                return (
+                                                    <TouchableOpacity
+                                                        key={t.id}
+                                                        style={[styles.chip, selected && styles.chipSelected]}
+                                                        onPress={() => toggleTag(t.id)}
+                                                    >
+                                                        <Text style={[styles.chipText, selected && styles.chipTextSelected]}>#{t.name}</Text>
+                                                    </TouchableOpacity>
+                                                );
+                                            })}
+                                        </View>
+                                    </>
+                                )}
+
+                                {/* Storage path */}
+                                {storagePaths.length > 0 && (
+                                    <>
+                                        <Text style={styles.fieldLabel}>Speicherort (optional)</Text>
+                                        <View style={styles.chipRow}>
+                                            <TouchableOpacity
+                                                style={[styles.chip, storagePathId === null && styles.chipSelected]}
+                                                onPress={() => setStoragePathId(null)}
+                                            >
+                                                <Text style={[styles.chipText, storagePathId === null && styles.chipTextSelected]}>Standard</Text>
+                                            </TouchableOpacity>
+                                            {storagePaths.map(s => (
+                                                <TouchableOpacity
+                                                    key={s.id}
+                                                    style={[styles.chip, storagePathId === s.id && styles.chipSelected]}
+                                                    onPress={() => setStoragePathId(storagePathId === s.id ? null : s.id)}
+                                                >
+                                                    <Text style={[styles.chipText, storagePathId === s.id && styles.chipTextSelected]}>{s.name}</Text>
+                                                </TouchableOpacity>
+                                            ))}
+                                        </View>
+                                    </>
+                                )}
+                            </>
+                        )}
 
                         {error && <Text style={styles.errorText}>{error}</Text>}
 
@@ -113,12 +246,25 @@ const styles = StyleSheet.create({
     fileCardLabel: { fontSize: 11, color: '#1971c2', fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 4 },
     fileCardName: { fontSize: 14, color: '#1a1a1a', fontWeight: '500' },
 
-    fieldLabel: { fontSize: 12, color: '#adb5bd', fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 20, marginBottom: 6 },
+    fieldLabel: { fontSize: 12, color: '#adb5bd', fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 20, marginBottom: 8 },
     input: {
         backgroundColor: '#ffffff', borderRadius: 8, paddingHorizontal: 14,
         paddingVertical: 11, fontSize: 15, color: '#212529',
         borderWidth: 1, borderColor: '#dee2e6',
     },
+
+    mdLoading: { flexDirection: 'row', alignItems: 'center', marginTop: 20, gap: 10 },
+    mdLoadingText: { fontSize: 14, color: '#6c757d' },
+    mdErrorText: { marginTop: 12, fontSize: 13, color: '#fd7e14' },
+
+    chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+    chip: {
+        paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20,
+        backgroundColor: '#f1f3f5', borderWidth: 1, borderColor: '#dee2e6',
+    },
+    chipSelected: { backgroundColor: '#228be6', borderColor: '#228be6' },
+    chipText: { fontSize: 13, color: '#495057', fontWeight: '500' },
+    chipTextSelected: { color: '#ffffff' },
 
     errorText: { marginTop: 12, fontSize: 14, color: '#fa5252' },
 

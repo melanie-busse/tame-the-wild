@@ -227,6 +227,9 @@ export async function uploadDocument(
     uri: string,
     filename: string,
     title?: string,
+    correspondentId?: number | null,
+    tagIds?: number[],
+    storagePathId?: number | null,
 ): Promise<void> {
     // fetch() cannot handle { uri, name, type } FormData parts in React Native;
     // XMLHttpRequest does.
@@ -234,6 +237,9 @@ export async function uploadDocument(
         const form = new FormData();
         form.append('document', { uri, name: filename, type: 'application/pdf' } as unknown as Blob);
         if (title?.trim()) form.append('title', title.trim());
+        if (correspondentId != null) form.append('correspondent', String(correspondentId));
+        if (storagePathId != null) form.append('storage_path', String(storagePathId));
+        if (tagIds?.length) tagIds.forEach(id => form.append('tags', String(id)));
 
         const xhr = new XMLHttpRequest();
         xhr.open('POST', `${_baseUrl}/documents/post_document/`);
