@@ -228,19 +228,24 @@ export async function uploadDocument(
     filename: string,
     title?: string,
 ): Promise<void> {
-    const form = new FormData();
-    form.append('document', { uri, name: filename, type: 'application/pdf' } as unknown as Blob);
-    if (title?.trim()) form.append('title', title.trim());
+    // fetch() cannot handle { uri, name, type } FormData parts in React Native;
+    // XMLHttpRequest does.
+    return new Promise<void>((resolve, reject) => {
+        const form = new FormData();
+        form.append('document', { uri, name: filename, type: 'application/pdf' } as unknown as Blob);
+        if (title?.trim()) form.append('title', title.trim());
 
-    let response: Response;
-    try {
-        response = await fetch(`${_baseUrl}/documents/post_document/`, {
-            method: 'POST',
-            headers: { Authorization: `Token ${_token}` },
-            body: form,
-        });
-    } catch (e) {
-        throw new Error(`network_error: ${e instanceof Error ? e.message : String(e)}`);
-    }
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', `${_baseUrl}/documents/post_document/`);
+        xhr.setRequestHeader('Authorization', `Token ${_token}`);
+        xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+                resolve();
+            } else {
+                reject(new Error(`HTTP ${xhr.status}`));
+            }
+        };
+        xhr.onerror = () => reject(new Error('network_error'));
+        xhr.send(form);
+    });
 }
