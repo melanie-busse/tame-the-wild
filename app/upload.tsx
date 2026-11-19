@@ -54,15 +54,20 @@ export default function UploadScreen() {
 
     const handlePickFile = async () => {
         const result = await DocumentPicker.getDocumentAsync({
-            type: ['application/pdf', 'image/jpeg', 'image/png'],
+            type: '*/*',
             copyToCacheDirectory: true,
         });
         if (result.canceled) return;
         const asset = result.assets[0];
-        const mime = asset.mimeType ?? 'application/pdf';
+        const mime = asset.mimeType ?? '';
+        const allowed = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
+        if (!allowed.includes(mime) && !mime.startsWith('image/')) {
+            setError('Nur PDF- und Bilddateien (JPEG, PNG) sind erlaubt.');
+            return;
+        }
         setFileUri(asset.uri);
         setFileName(asset.name);
-        setFileMime(mime);
+        setFileMime(mime || 'application/pdf');
         setTitle(asset.name.replace(/\.(pdf|jpe?g|png)$/i, ''));
         setError(null);
     };
