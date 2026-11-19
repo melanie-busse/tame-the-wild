@@ -39,9 +39,10 @@ export default function UploadScreen() {
                 { text: 'OK', onPress: () => router.back() },
             ]);
         } catch (e) {
-            const msg = e instanceof Error && e.message.startsWith('HTTP')
-                ? `Server-Fehler: ${e.message}`
-                : 'Netzwerkfehler – bitte Verbindung prüfen.';
+            const raw = e instanceof Error ? e.message : String(e);
+            const msg = raw.startsWith('HTTP')
+                ? `Server-Fehler: ${raw}`
+                : `Fehler: ${raw}`;
             setError(msg);
         } finally {
             setUploading(false);

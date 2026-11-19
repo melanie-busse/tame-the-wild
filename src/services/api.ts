@@ -239,8 +239,8 @@ export async function uploadDocument(
             headers: { Authorization: `Token ${_token}` },
             body: form,
         });
-    } catch {
-        throw new Error('network_error');
+    } catch (e) {
+        throw new Error(`network_error: ${e instanceof Error ? e.message : String(e)}`);
     }
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
 }
