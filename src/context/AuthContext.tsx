@@ -47,11 +47,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
         })();
     }, []);
 
-    // AppState re-lock: active after background → needs_biometric
+    // AppState re-lock: only lock if app was in background for >15 s
+    // Shorter absences (system dialogs, document picker) are ignored.
     useEffect(() => {
+        let backgroundedAt: number | null = null;
+        const LOCK_AFTER_MS = 5 * 60 * 1000;
+
         const sub = AppState.addEventListener('change', (next: AppStateStatus) => {
-            if (next === 'active' && authStateRef.current === 'authenticated') {
-                setAuthState('needs_biometric');
+            if (next === 'background' || next === 'inactive') {
+                backgroundedAt = Date.now();
+            } else if (next === 'active') {
+                const elapsed = backgroundedAt !== null ? Date.now() - backgroundedAt : 0;
+                backgroundedAt = null;
+                if (elapsed >= LOCK_AFTER_MS && authStateRef.current === 'authenticated') {
+                    setAuthState('needs_biometric');
+                }
             }
         });
         return () => sub.remove();

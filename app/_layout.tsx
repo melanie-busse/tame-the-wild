@@ -41,6 +41,10 @@ function RootGate() {
                 name="document/[id]"
                 options={{ title: 'Dokumentdetails' }}
             />
+            <Stack.Screen
+                name="upload"
+                options={{ title: 'Dokument hochladen' }}
+            />
         </Stack>
     );
 }

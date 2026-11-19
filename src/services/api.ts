@@ -222,3 +222,37 @@ export async function patchDocument(id: string, patch: DocumentPatch): Promise<v
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
 }
+
+export async function uploadDocument(
+    uri: string,
+    filename: string,
+    mimeType: string,
+    title?: string,
+    correspondentId?: number | null,
+    tagIds?: number[],
+    storagePathId?: number | null,
+): Promise<void> {
+    // fetch() cannot handle { uri, name, type } FormData parts in React Native;
+    // XMLHttpRequest does.
+    return new Promise<void>((resolve, reject) => {
+        const form = new FormData();
+        form.append('document', { uri, name: filename, type: mimeType } as unknown as Blob);
+        if (title?.trim()) form.append('title', title.trim());
+        if (correspondentId != null) form.append('correspondent', String(correspondentId));
+        if (storagePathId != null) form.append('storage_path', String(storagePathId));
+        if (tagIds?.length) tagIds.forEach(id => form.append('tags', String(id)));
+
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', `${_baseUrl}/documents/post_document/`);
+        xhr.setRequestHeader('Authorization', `Token ${_token}`);
+        xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+                resolve();
+            } else {
+                reject(new Error(`HTTP ${xhr.status}`));
+            }
+        };
+        xhr.onerror = () => reject(new Error('network_error'));
+        xhr.send(form);
+    });
+}

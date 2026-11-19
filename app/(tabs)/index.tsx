@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { StyleSheet, Text, View, FlatList, TouchableOpacity, TextInput, ListRenderItem, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
 import { Document, fetchPaperlessDocuments } from '../../src/services/api';
 
 export default function HomeScreen() {
@@ -12,16 +13,18 @@ export default function HomeScreen() {
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
-    // Echte Dokumente von der Paperless-API beim Start laden
-    useEffect(() => {
-        async function loadData() {
+    // Dokumente laden — auch nach Rückkehr vom Upload-Screen
+    useFocusEffect(
+        useCallback(() => {
+            let active = true;
             setLoading(true);
-            const docs = await fetchPaperlessDocuments();
-            setDocuments(docs);
-            setLoading(false);
-        }
-        loadData();
-    }, []);
+            fetchPaperlessDocuments()
+                .then(docs => { if (active) setDocuments(docs); })
+                .catch(() => {/* non-fatal */})
+                .finally(() => { if (active) setLoading(false); });
+            return () => { active = false; };
+        }, [])
+    );
 
     // Kategorien / Chips dynamisch aus allen verwendeten Tags ermitteln
     const allTags = Array.from(new Set(documents.flatMap((doc) => doc.tags)));
@@ -81,6 +84,9 @@ export default function HomeScreen() {
                         </View>
                         <Text style={styles.headerTitle}>TameTheWild</Text>
                     </View>
+                    <TouchableOpacity style={styles.uploadButton} onPress={() => router.push('/upload')} activeOpacity={0.7}>
+                        <Text style={styles.uploadButtonText}>+ Hochladen</Text>
+                    </TouchableOpacity>
                 </View>
                 <Text style={styles.headerSubtitle}>
                     {loading ? 'Lade Dokumente vom Server...' : `${documents.length} Dokumente vom Server geladen`}
@@ -100,16 +106,12 @@ export default function HomeScreen() {
 
             {/* Filter Chips (jetzt basierend auf Tags) */}
             <View style={styles.filterContainer}>
-                <FlatList
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    data={categories}
-                    keyExtractor={(item) => item}
-                    contentContainerStyle={styles.chipList}
-                    renderItem={({ item }) => {
+                <View style={styles.chipList}>
+                    {categories.map(item => {
                         const isSelected = selectedCategory === item || (item === 'Alle' && !selectedCategory);
                         return (
                             <TouchableOpacity
+                                key={item}
                                 style={[styles.chip, isSelected && styles.chipSelected]}
                                 onPress={() => setSelectedCategory(item)}
                             >
@@ -118,8 +120,8 @@ export default function HomeScreen() {
                                 </Text>
                             </TouchableOpacity>
                         );
-                    }}
-                />
+                    })}
+                </View>
             </View>
 
             {/* Dokumentenliste */}
@@ -147,13 +149,15 @@ const styles = StyleSheet.create({
     logoBadge: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#e7f5ff', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
     logoImage: { width: '100%', height: '100%', resizeMode: 'cover' },
     headerSubtitle: { fontSize: 14, color: '#6c757d', marginTop: 2, marginLeft: 50 },
+    uploadButton: { backgroundColor: '#228be6', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 7 },
+    uploadButtonText: { color: '#ffffff', fontSize: 14, fontWeight: '600' },
 
     searchContainer: { paddingHorizontal: 16, paddingVertical: 10, backgroundColor: '#ffffff' },
     searchInput: { backgroundColor: '#f1f3f5', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 10, fontSize: 15, color: '#212529' },
 
     filterContainer: { backgroundColor: '#ffffff', paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: '#e9ecef' },
-    chipList: { paddingHorizontal: 16, gap: 8 },
-    chip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, backgroundColor: '#f1f3f5', marginRight: 8 },
+    chipList: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 16, paddingTop: 8, gap: 8 },
+    chip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, backgroundColor: '#f1f3f5' },
     chipSelected: { backgroundColor: '#228be6' },
     chipText: { fontSize: 13, color: '#495057', fontWeight: '500' },
     chipTextSelected: { color: '#ffffff' },
