@@ -106,16 +106,12 @@ export default function HomeScreen() {
 
             {/* Filter Chips (jetzt basierend auf Tags) */}
             <View style={styles.filterContainer}>
-                <FlatList
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    data={categories}
-                    keyExtractor={(item) => item}
-                    contentContainerStyle={styles.chipList}
-                    renderItem={({ item }) => {
+                <View style={styles.chipList}>
+                    {categories.map(item => {
                         const isSelected = selectedCategory === item || (item === 'Alle' && !selectedCategory);
                         return (
                             <TouchableOpacity
+                                key={item}
                                 style={[styles.chip, isSelected && styles.chipSelected]}
                                 onPress={() => setSelectedCategory(item)}
                             >
@@ -124,8 +120,8 @@ export default function HomeScreen() {
                                 </Text>
                             </TouchableOpacity>
                         );
-                    }}
-                />
+                    })}
+                </View>
             </View>
 
             {/* Dokumentenliste */}
@@ -160,8 +156,8 @@ const styles = StyleSheet.create({
     searchInput: { backgroundColor: '#f1f3f5', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 10, fontSize: 15, color: '#212529' },
 
     filterContainer: { backgroundColor: '#ffffff', paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: '#e9ecef' },
-    chipList: { paddingHorizontal: 16, gap: 8 },
-    chip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, backgroundColor: '#f1f3f5', marginRight: 8 },
+    chipList: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 16, paddingTop: 8, gap: 8 },
+    chip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, backgroundColor: '#f1f3f5' },
     chipSelected: { backgroundColor: '#228be6' },
     chipText: { fontSize: 13, color: '#495057', fontWeight: '500' },
     chipTextSelected: { color: '#ffffff' },
