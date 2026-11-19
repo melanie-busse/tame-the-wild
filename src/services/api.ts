@@ -222,3 +222,25 @@ export async function patchDocument(id: string, patch: DocumentPatch): Promise<v
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
 }
+
+export async function uploadDocument(
+    uri: string,
+    filename: string,
+    title?: string,
+): Promise<void> {
+    const form = new FormData();
+    form.append('document', { uri, name: filename, type: 'application/pdf' } as unknown as Blob);
+    if (title?.trim()) form.append('title', title.trim());
+
+    let response: Response;
+    try {
+        response = await fetch(`${_baseUrl}/documents/post_document/`, {
+            method: 'POST',
+            headers: { Authorization: `Token ${_token}` },
+            body: form,
+        });
+    } catch {
+        throw new Error('network_error');
+    }
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+}

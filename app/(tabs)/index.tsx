@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { StyleSheet, Text, View, FlatList, TouchableOpacity, TextInput, ListRenderItem, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
 import { Document, fetchPaperlessDocuments } from '../../src/services/api';
 
 export default function HomeScreen() {
@@ -12,16 +13,18 @@ export default function HomeScreen() {
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
-    // Echte Dokumente von der Paperless-API beim Start laden
-    useEffect(() => {
-        async function loadData() {
+    // Dokumente laden — auch nach Rückkehr vom Upload-Screen
+    useFocusEffect(
+        useCallback(() => {
+            let active = true;
             setLoading(true);
-            const docs = await fetchPaperlessDocuments();
-            setDocuments(docs);
-            setLoading(false);
-        }
-        loadData();
-    }, []);
+            fetchPaperlessDocuments()
+                .then(docs => { if (active) setDocuments(docs); })
+                .catch(() => {/* non-fatal */})
+                .finally(() => { if (active) setLoading(false); });
+            return () => { active = false; };
+        }, [])
+    );
 
     // Kategorien / Chips dynamisch aus allen verwendeten Tags ermitteln
     const allTags = Array.from(new Set(documents.flatMap((doc) => doc.tags)));
@@ -81,6 +84,9 @@ export default function HomeScreen() {
                         </View>
                         <Text style={styles.headerTitle}>TameTheWild</Text>
                     </View>
+                    <TouchableOpacity style={styles.uploadButton} onPress={() => router.push('/upload')} activeOpacity={0.7}>
+                        <Text style={styles.uploadButtonText}>+ PDF</Text>
+                    </TouchableOpacity>
                 </View>
                 <Text style={styles.headerSubtitle}>
                     {loading ? 'Lade Dokumente vom Server...' : `${documents.length} Dokumente vom Server geladen`}
@@ -147,6 +153,8 @@ const styles = StyleSheet.create({
     logoBadge: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#e7f5ff', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
     logoImage: { width: '100%', height: '100%', resizeMode: 'cover' },
     headerSubtitle: { fontSize: 14, color: '#6c757d', marginTop: 2, marginLeft: 50 },
+    uploadButton: { backgroundColor: '#228be6', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 7 },
+    uploadButtonText: { color: '#ffffff', fontSize: 14, fontWeight: '600' },
 
     searchContainer: { paddingHorizontal: 16, paddingVertical: 10, backgroundColor: '#ffffff' },
     searchInput: { backgroundColor: '#f1f3f5', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 10, fontSize: 15, color: '#212529' },
