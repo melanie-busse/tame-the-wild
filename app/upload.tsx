@@ -18,6 +18,7 @@ export default function UploadScreen() {
     // file
     const [fileUri, setFileUri] = useState<string | null>(null);
     const [fileName, setFileName] = useState('');
+    const [fileMime, setFileMime] = useState('application/pdf');
     const [title, setTitle] = useState('');
 
     // metadata selections
@@ -53,14 +54,16 @@ export default function UploadScreen() {
 
     const handlePickFile = async () => {
         const result = await DocumentPicker.getDocumentAsync({
-            type: 'application/pdf',
+            type: ['application/pdf', 'image/jpeg', 'image/png'],
             copyToCacheDirectory: true,
         });
         if (result.canceled) return;
         const asset = result.assets[0];
+        const mime = asset.mimeType ?? 'application/pdf';
         setFileUri(asset.uri);
         setFileName(asset.name);
-        setTitle(asset.name.replace(/\.pdf$/i, ''));
+        setFileMime(mime);
+        setTitle(asset.name.replace(/\.(pdf|jpe?g|png)$/i, ''));
         setError(null);
     };
 
@@ -78,6 +81,7 @@ export default function UploadScreen() {
             await uploadDocument(
                 fileUri,
                 fileName,
+                fileMime,
                 title || fileName,
                 correspondentId,
                 selectedTagIds,

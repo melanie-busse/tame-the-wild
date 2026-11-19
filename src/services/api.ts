@@ -226,6 +226,7 @@ export async function patchDocument(id: string, patch: DocumentPatch): Promise<v
 export async function uploadDocument(
     uri: string,
     filename: string,
+    mimeType: string,
     title?: string,
     correspondentId?: number | null,
     tagIds?: number[],
@@ -235,7 +236,7 @@ export async function uploadDocument(
     // XMLHttpRequest does.
     return new Promise<void>((resolve, reject) => {
         const form = new FormData();
-        form.append('document', { uri, name: filename, type: 'application/pdf' } as unknown as Blob);
+        form.append('document', { uri, name: filename, type: mimeType } as unknown as Blob);
         if (title?.trim()) form.append('title', title.trim());
         if (correspondentId != null) form.append('correspondent', String(correspondentId));
         if (storagePathId != null) form.append('storage_path', String(storagePathId));
