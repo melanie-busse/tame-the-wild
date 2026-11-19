@@ -85,7 +85,7 @@ export default function HomeScreen() {
                         <Text style={styles.headerTitle}>TameTheWild</Text>
                     </View>
                     <TouchableOpacity style={styles.uploadButton} onPress={() => router.push('/upload')} activeOpacity={0.7}>
-                        <Text style={styles.uploadButtonText}>+ PDF</Text>
+                        <Text style={styles.uploadButtonText}>+ Hochladen</Text>
                     </TouchableOpacity>
                 </View>
                 <Text style={styles.headerSubtitle}>

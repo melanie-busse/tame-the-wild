@@ -112,7 +112,7 @@ export default function UploadScreen() {
 
                 {/* File picker */}
                 <TouchableOpacity style={styles.pickButton} onPress={handlePickFile} activeOpacity={0.7}>
-                    <Text style={styles.pickButtonText}>📎  PDF auswählen</Text>
+                    <Text style={styles.pickButtonText}>📎  Datei auswählen</Text>
                 </TouchableOpacity>
 
                 {fileUri && (
