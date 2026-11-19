@@ -51,7 +51,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
     // Shorter absences (system dialogs, document picker) are ignored.
     useEffect(() => {
         let backgroundedAt: number | null = null;
-        const LOCK_AFTER_MS = 15_000;
+        const LOCK_AFTER_MS = 5 * 60 * 1000;
 
         const sub = AppState.addEventListener('change', (next: AppStateStatus) => {
             if (next === 'background' || next === 'inactive') {
